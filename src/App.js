@@ -102,8 +102,8 @@ function App() {
       let {
         contractClass: TictactoeContractClass
       } = await web3.loadContract("/tic-tac-toe/tictactoe_desc.json");
-
-      let c = newCall(TictactoeContractClass, [new PubKey(toHex(alicePubKey)), new PubKey(toHex(bobPubKey))])
+      let deadLine = Math.round(new Date().getTime() / 1000) + 3600;
+      let c = newCall(TictactoeContractClass, [new PubKey(toHex(alicePubKey)), new PubKey(toHex(bobPubKey)), deadLine])
       c.setDataPart('00000000000000000000');
       updateContractInstance(c);
       console.log('fetchContract successfully')

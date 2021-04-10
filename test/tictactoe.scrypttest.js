@@ -40,7 +40,7 @@ const publicKeyBob = bsv.PublicKey.fromPrivateKey(privateKeyBob)
 
 const Tictactoe = buildContractClass(runCompile('tictactoe.scrypt'));
 
-game = new Tictactoe(new PubKey(toHex(publicKeyAlice)), new PubKey(toHex(publicKeyBob)));
+game = new Tictactoe(new PubKey(toHex(publicKeyAlice)), new PubKey(toHex(publicKeyBob)), 1420000);
 
 
 
@@ -60,6 +60,7 @@ describe('Test sCrypt contract Tictactoe In Javascript', () => {
   }
 
   function testMove(isAliceTurn, n, outputScript, expected) {
+
     const privateKey = isAliceTurn ? privateKeyAlice : privateKeyBob;
     prevLockingScript = game.lockingScript.toASM();
 
@@ -70,6 +71,10 @@ describe('Test sCrypt contract Tictactoe In Javascript', () => {
       satoshis: 10000
     }))
 
+    if (!outputScript.isPublicKeyHashOut()) {
+      tx.nLockTime = 1420000;
+      tx.inputs[0].sequenceNumber = n;
+    }
 
     preimage = getPreimage(tx, prevLockingScript, inputSatoshis);
 
@@ -102,7 +107,6 @@ describe('Test sCrypt contract Tictactoe In Javascript', () => {
       script: outputScript1,
       satoshis: 10000
     }))
-
 
     preimage = getPreimage(tx, prevLockingScript, inputSatoshis);
 

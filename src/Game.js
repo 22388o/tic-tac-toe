@@ -4,7 +4,7 @@ import { bsv, Bytes, Sig, toHex } from 'scryptlib';
 import { web3, Input, SignType } from './web3';
 
 import server from './Server';
-import { getPreimage } from './web3/wutils';
+import { getPreimage, toBsvTx } from './web3/wutils';
 
 
 const calculateWinner = (squares) => {
@@ -118,9 +118,10 @@ class Game extends React.Component {
   async buildCallContractTx(i, newState, squares, history) {
     let newLockingScript = "";
     let winner = calculateWinner(squares).winner;
-    const FEE = 3000;
+    const FEE = 4000;
     let outputs = [];
     let amount = this.props.game.lastUtxo.satoshis - FEE;
+    let final = false;
     if (winner) {
       // winner is current player
 
@@ -132,7 +133,7 @@ class Game extends React.Component {
         satoshis: amount,
         script: newLockingScript
       })
-
+      final = true;
     } else if (history.length >= 9) {
 
       const aliceAddress = new bsv.PublicKey(this.props.game.alicePubKey, {
@@ -156,7 +157,7 @@ class Game extends React.Component {
         satoshis: amount,
         script: bobLockingScript
       })
-
+      final = true;
     } else {
       //next
       newLockingScript = [this.props.contractInstance.codePart.toHex(), bsv.Script.fromASM(newState).toHex()].join('');
@@ -172,19 +173,23 @@ class Game extends React.Component {
       return undefined;
     }
 
+    let nlockTime = Math.round(new Date().getTime() / 1000) + 3600;
 
     let tx = {
       inputs: [{
         utxo: this.props.game.lastUtxo,
-        sequence: 0,
+        sequence: final === true ? 0xFFFFFFFF : i,
         script: ""
       }],
-      outputs: outputs
+      outputs: outputs,
+      nLockTime: final === true ? 0 : nlockTime
     }
+
+
 
     let preimage = getPreimage(tx);
 
-    let sig = await web3.wallet.getSignature(tx, 0, SignType.ALL, true);
+    let sig = await web3.wallet.getSignature(tx, 0, SignType.ALL);
 
     let unlockScript = this.props.contractInstance.move(i, new Sig(toHex(sig)), amount, preimage).toHex();
 
@@ -233,13 +238,7 @@ class Game extends React.Component {
       };
 
       server.saveGame(Object.assign({}, this.props.game, {
-        gameState: gameState,
-        lastUtxo: {
-          txHash: txid,
-          outputIndex: 0,
-          satoshis: tx.outputs[0].satoshis,
-          script: tx.outputs[0].script
-        }
+        gameState: gameState
       }), 'next')
 
       this.setState(gameState);

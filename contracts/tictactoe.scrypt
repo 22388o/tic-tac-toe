@@ -3,6 +3,7 @@ import "util.scrypt";
 contract TicTacToe {
     PubKey alice;
     PubKey bob;
+    int deadline;
 
     static const int TURNLEN = 1;
     static const int BOARDLEN = 9;
@@ -50,6 +51,8 @@ contract TicTacToe {
 
             outputs = aliceOutput + bobOutput;
         } else {
+            require(Util.nLocktime(txPreimage) >= this.deadline);
+            require(Util.nSequence(txPreimage) < 0xFFFFFFFF);
             // update state: next turn & next board
             bytes scriptCode_ = scriptCode[ : scriptLen - BOARDLEN - TURNLEN] + num2bin(1 - turn, TURNLEN) + board;
             bytes output = Util.buildOutput(scriptCode_, amount);
@@ -95,5 +98,20 @@ contract TicTacToe {
         }
 
         return full;
+    }
+
+    // withdraw after bidding is over
+    public function close(SigHashPreimage txPreimage, int amount) {
+        require(Tx.checkPreimage(txPreimage));
+        require(Util.nLocktime(txPreimage) >= this.deadline);
+        require(Util.nSequence(txPreimage) < 0xFFFFFFFF);
+
+        bytes aliceScript = Util.pubKeyToP2PKH(this.alice);
+        bytes aliceOutput = Util.buildOutput(aliceScript, amount);
+        bytes bobScript = Util.pubKeyToP2PKH(this.bob);
+        bytes bobOutput = Util.buildOutput(bobScript, amount);
+        bytes outputs = aliceOutput + bobOutput;
+
+        require(hash256(outputs) == Util.hashOutputs(txPreimage));
     }
 }
