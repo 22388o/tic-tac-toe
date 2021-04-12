@@ -79,7 +79,7 @@ class Game extends React.Component {
 
 
   calculateNewState(squares) {
-    return (!this.state.xIsNext ? '00' : '01') + squares.map(square => {
+    return (this.state.xIsNext ? '00' : '01') + squares.map(square => {
 
       if (square && square.label === 'X') {
         return '01'
@@ -115,7 +115,7 @@ class Game extends React.Component {
   }
 
 
-  async buildCallContractTx(i, newState, squares, history) {
+  async buildCallContractTx(newState, squares, history) {
     let newLockingScript = "";
     let winner = calculateWinner(squares).winner;
     const FEE = 4000;
@@ -160,7 +160,7 @@ class Game extends React.Component {
       final = true;
     } else {
       //next
-      newLockingScript = [this.props.contractInstance.codePart.toHex(), bsv.Script.fromASM(newState).toHex()].join('');
+      newLockingScript = this.props.contractInstance.lockingScript.toHex();
       outputs.push({
         satoshis: amount,
         script: newLockingScript
@@ -178,7 +178,7 @@ class Game extends React.Component {
     let tx = {
       inputs: [{
         utxo: this.props.game.lastUtxo,
-        sequence: final === true ? 0xFFFFFFFF : i,
+        sequence: final === true ? 0xFFFFFFFF : history.length,
         script: ""
       }],
       outputs: outputs,
@@ -191,7 +191,7 @@ class Game extends React.Component {
 
     let sig = await web3.wallet.getSignature(tx, 0, SignType.ALL);
 
-    let unlockScript = this.props.contractInstance.move(i, new Sig(toHex(sig)), amount, preimage).toHex();
+    let unlockScript = this.props.contractInstance.move(new Sig(toHex(sig)), amount, preimage, new Bytes(newState)).toHex();
 
     tx.inputs[0].script = unlockScript;
 
@@ -214,7 +214,7 @@ class Game extends React.Component {
 
     let newState = this.calculateNewState(squares);
 
-    let tx = await this.buildCallContractTx(i, newState, squares, history);
+    let tx = await this.buildCallContractTx(newState, squares, history);
 
     if (!tx) {
       console.error('buildCallContractTx fail...')
@@ -237,9 +237,25 @@ class Game extends React.Component {
         currentStepNumber: history.length,
       };
 
-      server.saveGame(Object.assign({}, this.props.game, {
-        gameState: gameState
-      }), 'next')
+      if(tx.nLockTime === 0) //final tx 
+      {
+        server.saveGame(Object.assign({}, this.props.game, {
+          gameState: gameState,
+          lastUtxo: {
+            txHash: txid,
+            outputIndex: 0,
+            satoshis: tx.outputs[0].satoshis,
+            script: tx.outputs[0].script
+          }
+        }), 'next')
+
+      } else {
+        server.saveGame(Object.assign({}, this.props.game, {
+          gameState: gameState
+        }), 'next')
+      }
+
+      
 
       this.setState(gameState);
 

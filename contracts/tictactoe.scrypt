@@ -11,32 +11,26 @@ contract TicTacToe {
     static const bytes ALICE = b'01';
     static const bytes BOB = b'02';
 
-    public function move(int n, Sig sig, int amount, SigHashPreimage txPreimage) {
+    public function move(Sig sig, int amount, SigHashPreimage txPreimage, bytes sol) {
         require(Tx.checkPreimage(txPreimage));
-        require(n >= 0 && n < BOARDLEN);
 
-        bytes scriptCode = Util.scriptCode(txPreimage);
-        int scriptLen = len(scriptCode);
 
-        int boardStart = scriptLen - BOARDLEN;
-        // state: turn (1 byte) + board (9 bytes)
-        int turn = unpack(scriptCode[boardStart - TURNLEN : boardStart]);
-        bytes board = scriptCode[boardStart : ];
+        int who = unpack(sol[0: TURNLEN]);
+        bytes board = sol[1 : ];
+        require(len(board) == BOARDLEN);
 
-        // not filled
-        require(Util.getElemAt(board, n) == EMPTY);
+        bytes play = who == 0 ? ALICE : BOB;
 
-        bytes play = turn == 0 ? ALICE : BOB;
-        PubKey player = turn == 0 ? this.alice : this.bob;
-
+        PubKey player = who == 0 ? this.alice : this.bob;
+        PubKey playerOther = who == 0 ?  this.bob : this.alice;
         // ensure it's player's turn
         require(checkSig(sig, player));
-        // make the move
-        board = Util.setElemAt(board, n, play);
+
 
         bytes outputs = b'';
         if (this.won(board, play)) {
             // winner takes all
+            //require(checkSig(sigother, playerOther));
             bytes outputScript = Util.pubKeyToP2PKH(player);
             bytes output = Util.buildOutput(outputScript, amount);
             outputs = output;
@@ -53,9 +47,9 @@ contract TicTacToe {
         } else {
             require(Util.nLocktime(txPreimage) >= this.deadline);
             require(Util.nSequence(txPreimage) < 0xFFFFFFFF);
-            // update state: next turn & next board
-            bytes scriptCode_ = scriptCode[ : scriptLen - BOARDLEN - TURNLEN] + num2bin(1 - turn, TURNLEN) + board;
-            bytes output = Util.buildOutput(scriptCode_, amount);
+            // update state: next who & next board
+            bytes scriptCode = Util.scriptCode(txPreimage);
+            bytes output = Util.buildOutput(scriptCode, amount);
             outputs = output;
         }
 
@@ -100,18 +94,18 @@ contract TicTacToe {
         return full;
     }
 
-    // withdraw after bidding is over
-    public function close(SigHashPreimage txPreimage, int amount) {
-        require(Tx.checkPreimage(txPreimage));
-        require(Util.nLocktime(txPreimage) >= this.deadline);
-        require(Util.nSequence(txPreimage) < 0xFFFFFFFF);
+//     // withdraw after bidding is over
+//     public function close(SigHashPreimage txPreimage, int amount) {
+//         require(Tx.checkPreimage(txPreimage));
+//         require(Util.nLocktime(txPreimage) >= this.deadline);
+//         require(Util.nSequence(txPreimage) < 0xFFFFFFFF);
 
-        bytes aliceScript = Util.pubKeyToP2PKH(this.alice);
-        bytes aliceOutput = Util.buildOutput(aliceScript, amount);
-        bytes bobScript = Util.pubKeyToP2PKH(this.bob);
-        bytes bobOutput = Util.buildOutput(bobScript, amount);
-        bytes outputs = aliceOutput + bobOutput;
+//         bytes aliceScript = Util.pubKeyToP2PKH(this.alice);
+//         bytes aliceOutput = Util.buildOutput(aliceScript, amount);
+//         bytes bobScript = Util.pubKeyToP2PKH(this.bob);
+//         bytes bobOutput = Util.buildOutput(bobScript, amount);
+//         bytes outputs = aliceOutput + bobOutput;
 
-        require(hash256(outputs) == Util.hashOutputs(txPreimage));
-    }
+//         require(hash256(outputs) == Util.hashOutputs(txPreimage));
+//     }
 }

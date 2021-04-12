@@ -82,7 +82,7 @@ function App() {
     console.log('onDeployed...')
 
     if (game && game.alicePubKey && game.bobPubKey) {
-      fetchContract(game.alicePubKey, game.bobPubKey)
+      fetchContract(game.alicePubKey, game.bobPubKey, game.deadLine)
     }
 
     updateStart(true);
@@ -96,15 +96,14 @@ function App() {
   }
 
 
-  async function fetchContract(alicePubKey, bobPubKey) {
+  async function fetchContract(alicePubKey, bobPubKey, deadLine) {
 
     if (contractInstance === null && alicePubKey && bobPubKey) {
       let {
         contractClass: TictactoeContractClass
       } = await web3.loadContract("/tic-tac-toe/tictactoe_desc.json");
-      let deadLine = Math.round(new Date().getTime() / 1000) + 3600;
       let c = newCall(TictactoeContractClass, [new PubKey(toHex(alicePubKey)), new PubKey(toHex(bobPubKey)), deadLine])
-      c.setDataPart('00000000000000000000');
+      //c.setDataPart('00000000000000000000');
       updateContractInstance(c);
       console.log('fetchContract successfully')
       return c;
@@ -127,22 +126,24 @@ function App() {
     }
 
     let player = server.getCurrentPlayer();
-
+    let deadLine = Math.round(new Date().getTime() / 1000) + 3600;
     if (player === "alice") {
       Object.assign(game, {
         "alicePubKey": pubKey,
-        "player": player
+        "player": player,
+        "deadLine": deadLine
       })
 
     } else {
       Object.assign(game, {
         "bobPubKey": pubKey,
-        "player": player
+        "player": player,
+        "deadLine": deadLine
       })
     }
 
 
-    let contract = await fetchContract(game.alicePubKey, game.bobPubKey);
+    let contract = await fetchContract(game.alicePubKey, game.bobPubKey, deadLine);
 
     console.log('fetchContract', contract, player)
     if (contract != null) {
@@ -188,7 +189,7 @@ function App() {
       }
 
       if (game && game.alicePubKey && game.bobPubKey) {
-        fetchContract(game.alicePubKey, game.bobPubKey)
+        fetchContract(game.alicePubKey, game.bobPubKey, game.deadLine)
       }
 
       let alicePrivateKey = server.getAlicePrivateKey();
