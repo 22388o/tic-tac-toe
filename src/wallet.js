@@ -22,7 +22,7 @@ const Wallet = props => {
                 setBalance(balance)
             })
         } else if (server.getPrivateKey()) {
-            web3.setWallet(new LocalWallet(NetWork.Mainnet, server.getPrivateKey()));
+            web3.setWallet(new LocalWallet(NetWork.Testnet, server.getPrivateKey()));
             web3.wallet.getRawChangeAddress().then(address => {
                 setAddress(address)
             })
@@ -50,10 +50,10 @@ const Wallet = props => {
     const onClick = (e) => {
 
         try {
-            const privateKey = new bsv.PrivateKey.fromRandom('mainnet')
+            const privateKey = new bsv.PrivateKey.fromRandom('testnet')
 
             setAddress(privateKey.toAddress() + '')
-            web3.setWallet(new LocalWallet(NetWork.Mainnet, privateKey.toWIF()));
+            web3.setWallet(new LocalWallet(NetWork.Testnet, privateKey.toWIF()));
 
             server.savePrivateKey(privateKey.toWIF());
         } catch (e) {
@@ -75,17 +75,17 @@ const Wallet = props => {
 
             let address = new bsv.Address.fromString(withdrawAddress);
 
-            if(address && address.type === 'pubkeyhash' && address.network.name === 'livenet') {
-                console.log('adddress', address )
+            if (address && address.type === 'pubkeyhash' && address.network.name === 'testnet') {
+                console.log('adddress', address)
             } else {
                 throw 'invalid bitcoin address';
             }
-            
+
             let changeAddress = address + ''
 
             web3.wallet.listUnspent(0).then(utxos => {
 
-                let total = 0 ;
+                let total = 0;
                 utxos.forEach(utxo => {
                     total += utxo.satoshis;
                     tx.inputs.push(
@@ -115,31 +115,31 @@ const Wallet = props => {
 
                 return tx;
             })
-            .then(tx => {
-                //alice sign
+                .then(tx => {
+                    //alice sign
 
-                tx.inputs.forEach(async (input, index) => {
-                    let unlockscript = await web3.wallet.signRawTransaction(tx, index, SignType.ALL);
+                    tx.inputs.forEach(async (input, index) => {
+                        let unlockscript = await web3.wallet.signRawTransaction(tx, index, SignType.ALL);
 
-                    tx.inputs[index].script = unlockscript;
+                        tx.inputs[index].script = unlockscript;
 
+                    })
+
+                    return tx;
+                }).then(tx => {
+                    console.log('send tx', tx)
+                    return web3.sendTx(tx);
+                }).then(txid => {
+                    console.log('console txid', txid)
+                }).catch(e => {
+                    alert('withdraw error ' + e)
                 })
-  
-                return tx;
-            }).then(tx => {
-                console.log('send tx', tx)
-                return web3.sendTx(tx);
-            }).then(txid => {
-                console.log('console txid', txid)
-            }).catch(e => {
-                alert('withdraw error ' + e)
-            })
-        
-    } catch(e) {
-        alert('withdraw error ' + e)
-    }
 
-}
+        } catch (e) {
+            alert('withdraw error ' + e)
+        }
+
+    }
 
 
 
@@ -159,13 +159,13 @@ const Wallet = props => {
                     <label >You can fund the address with your wallet</label>
                     <br></br>
                     <label className="warnning">Warnning:  don't funds it with too much coin.</label>
-                    
+
                 </div>
                 <div className="withdraw" >
                     <input id="withdrawAddress" placeholder="Bitcoin Address" type='text' ></input>
-                    <button  onClick={onWithdraw}>Withdraw Fund</button>
+                    <button onClick={onWithdraw}>Withdraw Fund</button>
                 </div>
-               
+
             </div>
             <div className="walletqrcode">
                 <QRCode value={address} ></QRCode>
