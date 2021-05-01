@@ -4,7 +4,7 @@ import { bsv, Bytes, Sig, toHex } from 'scryptlib';
 import { web3, Input, SignType } from './web3';
 
 import server from './Server';
-import { getPreimage } from './web3/wutils';
+import { getPreimage, toBsvTx } from './web3/wutils';
 
 
 const calculateWinner = (squares) => {
@@ -91,6 +91,19 @@ class Game extends React.Component {
     }).join('');
   }
 
+  calculateOldState(squares) {
+    return (this.state.xIsNext ? '00' : '01') + squares.map(square => {
+
+      if (square && square.label === 'X') {
+        return '01'
+      } else if (square && square.label === 'O') {
+        return '02'
+      } else {
+        return '00';
+      }
+    }).join('');
+  }
+
 
   checkIfValid(i, squares) {
     if (!this.props.game || !this.props.game.lastUtxo) {
@@ -115,7 +128,7 @@ class Game extends React.Component {
   }
 
 
-  async buildCallContractTx(i, newState, squares, history) {
+  async buildCallContractTx(i, newState, oldState, squares, history) {
     let newLockingScript = "";
     let winner = calculateWinner(squares).winner;
     const FEE = 3000;
@@ -186,9 +199,22 @@ class Game extends React.Component {
 
     let sig = await web3.wallet.getSignature(tx, 0, SignType.ALL, true);
 
+    this.props.contractInstance.setDataPart(oldState);
+
     let unlockScript = this.props.contractInstance.move(i, new Sig(toHex(sig)), amount, preimage).toHex();
 
     tx.inputs[0].script = unlockScript;
+
+    // we can verify locally before we broadcast the tx, if fail, 
+    // it will print the launch.json in the brower webview developer tool, just copy/paste,
+    // and try launch the sCrypt debugger
+
+    const result = this.props.contractInstance.move(i, new Sig(toHex(sig)), amount, preimage).verify({ inputSatoshis: this.props.game.lastUtxo.satoshis, tx: toBsvTx(tx) })
+
+    if (!result.success) {
+      throw new Error(result.error)
+    }
+
 
     return tx;
   }
@@ -201,6 +227,7 @@ class Game extends React.Component {
     const current = history[history.length - 1];
     const squares = current.squares.slice();
 
+    const oldState = this.calculateOldState(squares);
     if (!this.checkIfValid(i, squares)) {
       console.error('handleClick checkIfValid false...')
       return;
@@ -209,7 +236,7 @@ class Game extends React.Component {
 
     let newState = this.calculateNewState(squares);
 
-    let tx = await this.buildCallContractTx(i, newState, squares, history);
+    let tx = await this.buildCallContractTx(i, newState, oldState, squares, history);
 
     if (!tx) {
       console.error('buildCallContractTx fail...')
