@@ -220,6 +220,8 @@ class Game extends React.Component {
       throw new Error(result.error)
     }
 
+    this.props.contractInstance.commitState();
+
     return tx;
   }
 

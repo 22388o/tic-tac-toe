@@ -112,7 +112,7 @@ describe('Test sCrypt contract Tictactoe In Javascript', () => {
 
     const context = { tx, inputIndex, inputSatoshis }
 
-    result = game.move(n, new Sig(toHex(sig)), 10000, preimage).verify(context)
+    result = game.move(n, sig, 10000, preimage).verify(context)
     expect(result.success, result.error).to.be.true;
   }
 
