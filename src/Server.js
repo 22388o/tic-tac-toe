@@ -73,13 +73,13 @@ class Server extends EventEmitter {
 
     savePrivateKey = (key) => {
         this.privKey = key;
-        window.localStorage.setItem(this.player, key);
+        window.localStorage.setItem('key', key);
     }
 
 
     getPrivateKey = () => {
         if (this.player) {
-            this.privKey = window.localStorage.getItem(this.player);
+            this.privKey = window.localStorage.getItem('key');
         }
 
         return this.privKey;
@@ -87,12 +87,12 @@ class Server extends EventEmitter {
 
     getBobPrivateKey = () => {
 
-        return window.localStorage.getItem('bob');
+        return window.localStorage.getItem('key');
     }
 
     getAlicePrivateKey = () => {
 
-        return window.localStorage.getItem('alice');
+        return window.localStorage.getItem('key');
     }
 
 

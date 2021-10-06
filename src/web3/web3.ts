@@ -59,7 +59,7 @@ export class web3 {
 
     tx.outputs.push({
       script: contract.lockingScript.toHex(),
-      satoshis: amountInContract * 2
+      satoshis: amountInContract
     });
 
     const minAmount = amountInContract + FEE;
@@ -98,50 +98,9 @@ export class web3 {
 
       return tx;
     }).then(tx => {
-      return bobWallet.listUnspent(minAmount, {
-        purpose: 'change'
-      }).then(async (utxos: UTXO[]) => {
-
-        if (utxos.length === 0) {
-          throw new Error('no utxos');
-        }
-
-        //add input which using utxo from bob
-        tx.inputs.push(
-          {
-            utxo: utxos[0],
-            script: '',
-            sequence: 0
-          }
-        );
-
-        const changeAmount = utxos[0].satoshis - amountInContract - FEE;
-
-        if (changeAmount <= 0) {
-          throw new Error('fund is not enough');
-        }
-
-        //add bob change output
-        tx.outputs.push(
-          {
-            script: bsv.Script.buildPublicKeyHashOut(bobChangeAddress).toHex(),
-            satoshis: changeAmount
-          }
-        );
-
-        return tx;
-
-      })
-    }).then(tx => {
       //alice sign
       return aliceWallet.signRawTransaction(tx, 0, SignType.ALL).then(unlockscript => {
         tx.inputs[0].script = unlockscript;
-        return tx;
-      })
-    }).then(tx => {
-      //bob sign
-      return bobWallet.signRawTransaction(tx, 1, SignType.ALL).then(unlockscript => {
-        tx.inputs[1].script = unlockscript;
         return tx;
       })
     })
