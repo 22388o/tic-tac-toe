@@ -44,13 +44,10 @@ export class web3 {
 
 
 
-  static async buildDeployTx(contract: AbstractContract, amountInContract: number, alicePrivateKey: string, bobPrivateKey: string): Promise<Tx> {
+  static async buildDeployTx(contract: AbstractContract, amountInContract: number): Promise<Tx> {
 
-    let aliceWallet = new LocalWallet(NetWork.Testnet, alicePrivateKey);
-    let bobWallet = new LocalWallet(NetWork.Testnet, bobPrivateKey);
 
-    const aliceChangeAddress = await aliceWallet.getRawChangeAddress();
-    const bobChangeAddress = await bobWallet.getRawChangeAddress();
+    const aliceChangeAddress = await web3.wallet.getRawChangeAddress();
 
     const tx: Tx = {
       inputs: [],
@@ -64,7 +61,7 @@ export class web3 {
 
     const minAmount = amountInContract + FEE;
 
-    return aliceWallet.listUnspent(minAmount, {
+    return web3.wallet.listUnspent(minAmount, {
       purpose: 'change'
     }).then(async (utxos: UTXO[]) => {
 
@@ -99,7 +96,7 @@ export class web3 {
       return tx;
     }).then(tx => {
       //alice sign
-      return aliceWallet.signRawTransaction(tx, 0, SignType.ALL).then(unlockscript => {
+      return web3.wallet.signRawTransaction(tx, 0, SignType.ALL).then(unlockscript => {
         tx.inputs[0].script = unlockscript;
         return tx;
       })
@@ -116,8 +113,8 @@ export class web3 {
   }
 
 
-  static async deploy(contract: AbstractContract, amountInContract: number, alicePrivateKey: string, bobPrivateKey: string): Promise<[Tx, string]> {
-    return web3.buildDeployTx(contract, amountInContract, alicePrivateKey, bobPrivateKey).then(async tx => {
+  static async deploy(contract: AbstractContract, amountInContract: number): Promise<[Tx, string]> {
+    return web3.buildDeployTx(contract, amountInContract).then(async tx => {
       return web3.sendTx(tx).then(txid => {
         return [tx, txid];
       })

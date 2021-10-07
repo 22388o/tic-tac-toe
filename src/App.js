@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import TitleBar from './TitleBar';
 import { Bytes, PubKey, toHex, newCall } from 'scryptlib';
 
-import { web3, SignType } from './web3';
+import { web3 } from './web3';
 import Wallet from './wallet';
 import { useInterval } from './hooks';
 import server from './Server';
@@ -101,10 +101,15 @@ function App() {
     if (contractInstance === null && alicePubKey && bobPubKey) {
       let {
         contractClass: TictactoeContractClass
-      } = await web3.loadContract("/tic-tac-toe/tictactoe_desc.json");
+      } = await web3.loadContract("/tic-tac-toe/tictactoe_release_desc.json");
 
-      let c = newCall(TictactoeContractClass, [new PubKey(toHex(alicePubKey)), new PubKey(toHex(bobPubKey))])
-      c.setDataPart('00000000000000000000');
+      let c = new TictactoeContractClass(
+        new PubKey(toHex(alicePubKey)),
+        new PubKey(toHex(bobPubKey)),
+        true,
+        new Bytes('000000000000000000')
+      );
+
       updateContractInstance(c);
       console.log('fetchContract successfully')
       return c;
@@ -146,7 +151,7 @@ function App() {
 
     console.log('fetchContract', contract, player)
     if (contract != null) {
-      web3.deploy(contract, game.amount, alicePrivateKey, bobPrivateKey).then(([tx, txid]) => {
+      web3.deploy(contract, game.amount).then(([tx, txid]) => {
         game.lastUtxo = {
           txHash: txid,
           outputIndex: 0,

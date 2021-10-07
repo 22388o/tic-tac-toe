@@ -50,12 +50,12 @@ const Wallet = props => {
     const onClick = (e) => {
 
         try {
-            const privateKey = new bsv.PrivateKey.fromRandom('testnet')
+            const privateKey = new bsv.PrivateKey.fromWIF('cSdx9ASxwLCmmbZDkPXvzfJHdCPbho3ur1Qgt8L9b9rucNAqhLJ2')
 
             setAddress(privateKey.toAddress() + '')
             web3.setWallet(new LocalWallet(NetWork.Testnet, privateKey.toWIF()));
 
-            server.savePrivateKey(privateKey.toWIF());
+            server.savePrivateKey(privateKey.toWIF() + '');
         } catch (e) {
             console.log('wallet onChange error', e)
         }
